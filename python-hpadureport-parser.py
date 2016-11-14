@@ -3,8 +3,10 @@
 # Written by Johan Guldmyr 2016
 #
 # Currently it:
-# - parses the "bus faults" of all the hard drives.
-# - outputs when the value is different in the two xml files
+# - makes python dictionaries of the XML data..
+# - only uses numbers of disks under "(Since Reset)" - see the stats_area variable
+# - parses the "bus faults" of all the disks
+#  - outputs when the value is different in the two xml files
 #
 # Example output:
 #$ python hpadureport_compare.py |sort|head
@@ -15,14 +17,21 @@
 #
 
 import xml.etree.ElementTree as ET
-tree = ET.parse('2/ADUReport.xml')
-tree2 = ET.parse('3/ADUReport.xml')
+
+######### Configuration
+tree = ET.parse('1ADUReport.xml')
+tree2 = ET.parse('2ADUReport.xml')
 root = tree.getroot()
 root2 = tree2.getroot()
 
 debug = False
 
-# Top level schema:
+stats_area = "Monitor and Performance Statistics (Since Reset)"
+
+######### End configuration
+
+### Schema "documentation"
+
 #<ADUReport>
 #<MetaProperty id="ADU Version" value="2.40.13.0"/>
 #<MetaProperty id="Diagnostic Module Version" value="8.4.13.0"/>
@@ -30,6 +39,21 @@ debug = False
 #<Device deviceType="ArrayController" id="AC:1234567890" marketingName="Smart Array P440 in slot 1">...</Device>
 #<Device deviceType="ArrayController" id="AC:1234456789" marketingName="Smart Array P440 in slot 2">...</Device>
 #<Device deviceType="ArrayController" id="AC:123456789" marketingName="Dynamic Smart Array B140i in slot 0b">...</Device>
+#..
+#..
+#<Device deviceType="PhysicalDrive" id="AC:1234567890,PD:16" marketingName="Physical Drive (4 TB SAS HDD) 1I:1:1">
+#<Errors/>
+#  <MetaStructure id="Physical Drive Status" size="2560">...</MetaStructure>
+#  <MetaStructure id="Monitor and Performance Statistics (Since Factory)">...</MetaStructure>
+#  <MetaStructure id="Monitor and Performance Statistics (Since Reset)">...</MetaStructure>
+#  <MetaStructure id="Serial SCSI Physical Drive Error Log" size="1536">...</MetaStructure>
+#  <MetaStructure id="Mode Sense 10">...</MetaStructure>
+#  <MetaStructure id="VPD Page 80 - Serial Number">...</MetaStructure>
+#  <MetaStructure id="VPD Page 83 - Array Information">...</MetaStructure>
+#  <MetaStructure id="Workload Information">...</MetaStructure>
+#</Device>
+#..
+#..
 #</ADUReport>
 
 def return_disks_bus_faults_dict(root):
@@ -67,22 +91,74 @@ def return_disks_bus_faults_dict(root):
     	        for d in c:
     	        # physical drive status
     	          if d.attrib != {}:
-    	            if debug: print d.attrib
-    	            for e in d:
-    	              id = e.attrib['id']
-    	              if id == "Bus Faults":
-                        bus_faults = e.attrib['value']
-    	                if debug: print "%s : %s" % (marketingName,bus_faults)
-                        disk_dict[marketingName] = bus_faults
+                    if d.attrib['id'] == stats_area:
+    	              if debug: print d.attrib
+    	              for e in d:
+    	                id = e.attrib['id']
+    	                if id == "Bus Faults":
+                          bus_faults = e.attrib['value']
+    	                  if debug: print "%s : %s" % (marketingName,bus_faults)
+                          disk_dict[marketingName] = bus_faults
   return(disk_dict)
 
-report1 = return_disks_bus_faults_dict(root)
-report2 = return_disks_bus_faults_dict(root2)
+def return_disks_all_dict(root):
 
-print "disk, value2, value1"
-for disk in report2:
-	value2 = report2[disk]
-	value1 = report1[disk]
-	#print "%s : %s" % (value2,value1)
-	if value2 != value1:
-		print "%s, %s, %s" % (disk, value2,value1)
+  """
+  single argument is an xml "root" of an ADUreport.xml
+  return a dictionary of dictionaries with disks as keys
+
+  """
+
+  disk_dict = {}
+
+  for a in root:
+  # controller
+    if a.tag == "Device":
+      for b in a:
+        # - disk arrays
+	# - storage enclosure
+        if b.tag == "Device":
+          if debug: print "b: %s" % b.tag
+          for c in b:
+    	  # - logical drives under arrays
+    	  # - disk drives under storage enclosures
+    	  # {'deviceType': 'PhysicalDrive', 'marketingName': 'Physical Drive (4 
+    	    if c.attrib != {}:
+      	      try: 
+                    devicetype = c.attrib['deviceType']
+    	      except KeyError:
+    	        if debug: print "no deviceType for: %s" % c.attrib
+    	        continue
+              marketingName = c.attrib['marketingName']
+              if devicetype == "PhysicalDrive":
+	        disk_dict[marketingName] = { }
+    	        for d in c:
+    	        # physical drive status
+    	          if d.attrib != {}:
+    	            if debug: print d.attrib
+                    if d.attrib['id'] == stats_area:
+    	              for e in d:
+    	                theid = e.attrib['id']
+		        try:
+		          value = e.attrib['value']
+		        except KeyError:
+		          #print "no value for id %s" % theid
+		          continue
+		        disk_dict[marketingName][theid] = value
+  return(disk_dict)
+
+if __name__ == "__main__":
+#	output = return_disks_all_dict(root)
+#	for i in output:
+#		print i
+#		print output[i]
+#		break
+
+  report1 = return_disks_bus_faults_dict(root)
+  report2 = return_disks_bus_faults_dict(root2)
+  print "disk, value2, value1"
+  for disk in report2:
+  	value2 = report2[disk]
+  	value1 = report1[disk]
+  	if value2 != value1:
+  		print "%s, %s, %s" % (disk, value2,value1)
