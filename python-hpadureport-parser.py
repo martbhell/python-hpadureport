@@ -20,7 +20,7 @@ import xml.etree.ElementTree as ET
 
 ######### Configuration
 tree = ET.parse('1ADUReport.xml')
-tree2 = ET.parse('2ADUReport.xml')
+tree2 = ET.parse('3ADUReport.xml')
 root = tree.getroot()
 root2 = tree2.getroot()
 
@@ -156,9 +156,10 @@ if __name__ == "__main__":
 
   report1 = return_disks_bus_faults_dict(root)
   report2 = return_disks_bus_faults_dict(root2)
-  print "disk, value2, value1"
+  print "disk, value2, value1, diff"
   for disk in report2:
-  	value2 = report2[disk]
-  	value1 = report1[disk]
+  	value2 = int(report2[disk], 16)
+  	value1 = int(report1[disk], 16)
+	diff = value2 - value1
   	if value2 != value1:
-  		print "%s, %s, %s" % (disk, value2,value1)
+  		print "%s, %s, %s, %s" % (disk, value2,value1, diff)
