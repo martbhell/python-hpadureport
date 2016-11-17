@@ -9,22 +9,35 @@
 #  - outputs when the value is different in the two xml files
 #
 # Example output:
-#$ python hpadureport_compare.py |sort|head
-#disk, value2, value1
-#Physical Drive (4 TB SAS HDD) 1I:1:32, 0x00000027, 0x00000023
-#Physical Drive (4 TB SAS HDD) 1I:1:33, 0x00000030, 0x00000028
-#Physical Drive (4 TB SAS HDD) 1I:1:37, 0x00000019, 0x0000000e
+#$ python python-hpadureport-parser.py -1 relative_path/1ADUReport.xml -2 relative_path/2ADUReport.xml 
+#disk, value2, value1, diff
+#Physical Drive (4 TB SAS HDD) 1I:1:32, 27, 23, 4
+#Physical Drive (4 TB SAS HDD) 1I:1:33, 30, 28, 2
+#Physical Drive (4 TB SAS HDD) 1I:1:37, 19, 16, 3
 #
 
 import xml.etree.ElementTree as ET
+import argparse
+
+######### Arguments
+parser = argparse.ArgumentParser(description='Process HP ADU reports')
+parser.add_argument('-1', dest='file1', action='store', required=True,
+                    help='path to file1')
+parser.add_argument('-2', dest='file2', action='store', required=True,
+                    help='path to file2')
+parser.add_argument('-d', dest='debug', action='store_true',
+                    help='enable debug')
+
+args = parser.parse_args()
+file1 = args.file1
+file2 = args.file2
+debug = args.debug
 
 ######### Configuration
-tree = ET.parse('pacific13/1ADUReport.xml')
-tree2 = ET.parse('pacific13/2ADUReport.xml')
+tree = ET.parse(file1)
+tree2 = ET.parse(file2)
 root = tree.getroot()
 root2 = tree2.getroot()
-
-debug = True
 
 stats_area = "Monitor and Performance Statistics (Since Reset)"
 #stats_area = "Monitor and Performance Statistics (Since Factory)"
