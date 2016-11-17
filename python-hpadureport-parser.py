@@ -190,14 +190,16 @@ if __name__ == "__main__":
 
   print "disk, value2, value1, diff"
   no_diff_cnt = 0
+  diff_cnt = 0
   for disk in report2:
   	value2 = int(report2[disk], 16)
   	value1 = int(report1[disk], 16)
 	diff = value2 - value1
   	if value2 != value1:
+		diff_cnt = diff_cnt + 1
   		print "%s, %s, %s, %s" % (disk, value2,value1, diff)
 	else:
-		no_diff_cnt == no_diff_cnt + 1
+		no_diff_cnt = no_diff_cnt + 1
 		if debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
-  if no_diff_cnt == 0:
+  if no_diff_cnt > 0 and diff_cnt < 1:
     print "no differences in the counters between any disks in the reports"
