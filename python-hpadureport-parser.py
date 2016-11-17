@@ -19,12 +19,12 @@
 import xml.etree.ElementTree as ET
 
 ######### Configuration
-tree = ET.parse('5ADUReport.xml')
-tree2 = ET.parse('6ADUReport.xml')
+tree = ET.parse('pacific13/1ADUReport.xml')
+tree2 = ET.parse('pacific13/2ADUReport.xml')
 root = tree.getroot()
 root2 = tree2.getroot()
 
-debug = False
+debug = True
 
 stats_area = "Monitor and Performance Statistics (Since Reset)"
 #stats_area = "Monitor and Performance Statistics (Since Factory)"
@@ -77,9 +77,9 @@ def return_disks_bus_faults_dict(root):
     if a.tag == "Device":
       for b in a:
         # array or storage enclosure
+	# TODO: this can be shortened I think..
 	if b.tag == "MetaStructure":
 	  if b.attrib['id'] == 'SubSystem Parameters':
-	    if debug: print b.attrib['id']
 	    for subsysparam in b:
    	      if subsysparam.attrib['id'] == "Chassis Serial Number":
                 chassisserialnumbers.append(subsysparam.attrib['value'])
@@ -176,9 +176,15 @@ if __name__ == "__main__":
     print "comparing differente chassis"
 
   print "disk, value2, value1, diff"
+  no_diff_cnt = 0
   for disk in report2:
   	value2 = int(report2[disk], 16)
   	value1 = int(report1[disk], 16)
 	diff = value2 - value1
   	if value2 != value1:
   		print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+	else:
+		no_diff_cnt == no_diff_cnt + 1
+		if debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+  if no_diff_cnt == 0:
+    print "no differences in the counters between any disks in the reports"
