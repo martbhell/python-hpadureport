@@ -11,10 +11,11 @@ python-hpadureport-parser
 # - outputs when the value is different in the two xml files
 #
 # Example output:
-#$ python hpadureport_compare.py |sort|head
-#disk, value2, value1
-#Physical Drive (4 TB SAS HDD) 1I:1:32, 0x00000027, 0x00000023
-#Physical Drive (4 TB SAS HDD) 1I:1:33, 0x00000030, 0x00000028
-#Physical Drive (4 TB SAS HDD) 1I:1:37, 0x00000019, 0x0000000e
+#$ python python-hpadureport-parser.py -1 relative_path/1ADUReport.xml -2 relative_path/2ADUReport.xml 
+#disk, value2, value1, diff
+#Physical Drive (4 TB SAS HDD) 1I:1:32, 27, 23, 4
+#Physical Drive (4 TB SAS HDD) 1I:1:33, 30, 28, 2
+#Physical Drive (4 TB SAS HDD) 1I:1:37, 19, 16, 3
+#
 #
 </pre>
