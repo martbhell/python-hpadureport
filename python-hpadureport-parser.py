@@ -19,14 +19,15 @@
 import xml.etree.ElementTree as ET
 
 ######### Configuration
-tree = ET.parse('1ADUReport.xml')
-tree2 = ET.parse('3ADUReport.xml')
+tree = ET.parse('5ADUReport.xml')
+tree2 = ET.parse('6ADUReport.xml')
 root = tree.getroot()
 root2 = tree2.getroot()
 
 debug = False
 
 stats_area = "Monitor and Performance Statistics (Since Reset)"
+#stats_area = "Monitor and Performance Statistics (Since Factory)"
 
 ######### End configuration
 
@@ -61,6 +62,7 @@ def return_disks_bus_faults_dict(root):
   """
   single argument is an xml "root" of an ADUreport.xml
   return a dictionary with each key being "marketingName" of the physical drives
+  return a list of chassis serial numbers found in the report
   
   example output:
   {'Physical Drive (4 TB SAS HDD) 1I:1:40': '0x00000001', 'Physical Drive (4 TB SAS HDD) 1I:1:43': '0x00000009', 'Physical Drive (4 TB SAS HDD) 1I:1:61': '0x0000000c', 'Physical Drive (4 TB SAS HDD) 1I:1:57': '0x00000013', 'Physical Drive (4 TB SAS HDD) 1I:1:60': '0x00000001'}
@@ -68,12 +70,19 @@ def return_disks_bus_faults_dict(root):
   """
 
   disk_dict = {}
+  chassisserialnumbers = []
 
   for a in root:
   # controller
     if a.tag == "Device":
       for b in a:
         # array or storage enclosure
+	if b.tag == "MetaStructure":
+	  if b.attrib['id'] == 'SubSystem Parameters':
+	    if debug: print b.attrib['id']
+	    for subsysparam in b:
+   	      if subsysparam.attrib['id'] == "Chassis Serial Number":
+                chassisserialnumbers.append(subsysparam.attrib['value'])
         if b.tag == "Device":
           if debug: print "b: %s" % b.tag
           for c in b:
@@ -99,13 +108,14 @@ def return_disks_bus_faults_dict(root):
                           bus_faults = e.attrib['value']
     	                  if debug: print "%s : %s" % (marketingName,bus_faults)
                           disk_dict[marketingName] = bus_faults
-  return(disk_dict)
+  return(disk_dict, chassisserialnumbers)
 
 def return_disks_all_dict(root):
 
   """
   single argument is an xml "root" of an ADUreport.xml
   return a dictionary of dictionaries with disks as keys
+  return a list of chassis serial numbers found in the report
 
   """
 
@@ -117,6 +127,12 @@ def return_disks_all_dict(root):
       for b in a:
         # - disk arrays
 	# - storage enclosure
+        if b.tag == "MetaStructure":
+          if b.attrib['id'] == 'SubSystem Parameters':
+            if debug: print b.attrib['id']
+            for subsysparam in b:
+              if subsysparam.attrib['id'] == "Chassis Serial Number":
+                chassisserialnumbers.append(subsysparam.attrib['value'])
         if b.tag == "Device":
           if debug: print "b: %s" % b.tag
           for c in b:
@@ -154,8 +170,11 @@ if __name__ == "__main__":
 #		print output[i]
 #		break
 
-  report1 = return_disks_bus_faults_dict(root)
-  report2 = return_disks_bus_faults_dict(root2)
+  [ report1, chassisserialnumbers1 ] = return_disks_bus_faults_dict(root)
+  [ report2, chassisserialnumbers2 ] = return_disks_bus_faults_dict(root2)
+  if chassisserialnumbers1 != chassisserialnumbers2:
+    print "comparing differente chassis"
+
   print "disk, value2, value1, diff"
   for disk in report2:
   	value2 = int(report2[disk], 16)
