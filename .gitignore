@@ -1,1 +1,4 @@
-*ADU*
+*
+!*.py
+!*.gitignore
+!*.md
