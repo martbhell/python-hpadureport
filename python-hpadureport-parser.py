@@ -27,6 +27,8 @@ parser.add_argument('-2', dest='file2', action='store', required=True,
                     help='path to file2')
 parser.add_argument('-d', dest='debug', action='store_true',
                     help='enable debug')
+parser.add_argument('-f', dest='area', action='store_true',
+                    help='since factory, otherwise since Reset')
 
 args = parser.parse_args()
 file1 = args.file1
@@ -39,8 +41,10 @@ tree2 = ET.parse(file2)
 root = tree.getroot()
 root2 = tree2.getroot()
 
-stats_area = "Monitor and Performance Statistics (Since Reset)"
-#stats_area = "Monitor and Performance Statistics (Since Factory)"
+if args.area:
+  stats_area = "Monitor and Performance Statistics (Since Factory)"
+else:
+  stats_area = "Monitor and Performance Statistics (Since Reset)"
 
 ######### End configuration
 
