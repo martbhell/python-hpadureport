@@ -4,7 +4,7 @@
 #
 # Currently it:
 # - makes python dictionaries of the XML data..
-# - only uses numbers of disks under "(Since Reset)" - see the stats_area variable
+# - use -f argument to get the numbers of disks under "(Since Factory)" other wise (Since Reset)"
 # - parses the "bus faults" of all the disks
 #  - outputs when the value is different in the two xml files
 #
