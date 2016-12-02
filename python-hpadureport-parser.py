@@ -9,15 +9,21 @@
 #  - outputs when the value is different in the two xml files
 #
 # Example output:
-#$ python python-hpadureport-parser.py -1 relative_path/1ADUReport.xml -2 relative_path/2ADUReport.xml 
+#$ python python-hpadureport-parser.py -1 relative_path/1ADUReport.xml -2 relative_path/2ADUReport.xml -e "Bus Faults"
+#CRITICAL: Error counter different on disks: Physical Drive (4 TB SAS HDD) 1I:1:[32-64] (Wednesday November 23, 2016 8:09:55AM vs Friday December 02, 2016 9:56:30AM)
+#$ python python-hpadureport-parser.py -1 relative_path/1ADUReport.xml -2 relative_path/2ADUReport.xml -e "Bus Faults" -v 
 #disk, value2, value1, diff
 #Physical Drive (4 TB SAS HDD) 1I:1:32, 27, 23, 4
 #Physical Drive (4 TB SAS HDD) 1I:1:33, 30, 28, 2
 #Physical Drive (4 TB SAS HDD) 1I:1:37, 19, 16, 3
+#[snip]
+#CRITICAL: Error counter different on disks: Physical Drive (4 TB SAS HDD) 1I:1:[32-64] (Wednesday November 23, 2016 8:09:55AM vs Friday December 02, 2016 9:56:30AM)
 #
 
+import sys # for sys.exit
 import xml.etree.ElementTree as ET
 import argparse
+import hostlist # used to turn list [ '1I:1:1' ,'1I:1:2'] into string 1I:1:[1-2] 
 
 ######### Arguments
 parser = argparse.ArgumentParser(description='Process HP ADU reports')
@@ -29,11 +35,22 @@ parser.add_argument('-d', dest='debug', action='store_true',
                     help='enable debug')
 parser.add_argument('-f', dest='area', action='store_true',
                     help='since factory, otherwise since Reset')
+parser.add_argument('-v', dest='verbosely', action='store_true',
+                    help='output verbosely')
+parser.add_argument('-e', dest='track_this_error_counter', action='store', required=True,
+                    help='counter to track - like "Bus Faults"')
 
 args = parser.parse_args()
 file1 = args.file1
 file2 = args.file2
 debug = args.debug
+verbosely = args.verbosely
+track_this_error_counter = args.track_this_error_counter
+
+OK = 0
+WARNING = 1
+CRITICAL = 2
+UNKNOWN = 3
 
 ######### Configuration
 tree = ET.parse(file1)
@@ -79,7 +96,9 @@ def return_disks_bus_faults_dict(root):
   """
   single argument is an xml "root" of an ADUreport.xml
   return a dictionary with each key being "marketingName" of the physical drives
+  return a dictionary with each key being "disk_short_name" of the physical drives
   return a list of chassis serial numbers found in the report
+  return a string with date when the report was generated
   
   example output:
   {'Physical Drive (4 TB SAS HDD) 1I:1:40': '0x00000001', 'Physical Drive (4 TB SAS HDD) 1I:1:43': '0x00000009', 'Physical Drive (4 TB SAS HDD) 1I:1:61': '0x0000000c', 'Physical Drive (4 TB SAS HDD) 1I:1:57': '0x00000013', 'Physical Drive (4 TB SAS HDD) 1I:1:60': '0x00000001'}
@@ -87,10 +106,14 @@ def return_disks_bus_faults_dict(root):
   """
 
   disk_dict = {}
+  disk_dict_short = {}
   chassisserialnumbers = []
 
   for a in root:
   # controller
+    if a.tag == "MetaProperty":
+      if a.attrib['id'] == "Time Generated":
+        time_generated = a.attrib["value"]
     if a.tag == "Device":
       for b in a:
         # array or storage enclosure
@@ -114,6 +137,9 @@ def return_disks_bus_faults_dict(root):
     	        continue
               marketingName = c.attrib['marketingName']
               if devicetype == "PhysicalDrive":
+		# turns Physical Drive (4 TB SAS HDD) 1I:1:5
+		# into 1I:1:5
+                disk_short_name = c.attrib['marketingName'].split(' ')[6]
     	        for d in c:
     	        # physical drive status
     	          if d.attrib != {}:
@@ -121,11 +147,12 @@ def return_disks_bus_faults_dict(root):
     	              if debug: print d.attrib
     	              for e in d:
     	                id = e.attrib['id']
-    	                if id == "Bus Faults":
+    	                if id == track_this_error_counter:
                           bus_faults = e.attrib['value']
     	                  if debug: print "%s : %s" % (marketingName,bus_faults)
                           disk_dict[marketingName] = bus_faults
-  return(disk_dict, chassisserialnumbers)
+                          disk_dict_short[disk_short_name] = bus_faults
+  return(disk_dict, disk_dict_short, chassisserialnumbers, time_generated)
 
 def return_disks_all_dict(root):
 
@@ -140,6 +167,9 @@ def return_disks_all_dict(root):
 
   for a in root:
   # controller
+    if a.tag == "MetaProperty":
+      if a.attrib['id'] == "Time Generated":
+        time_generated = a.attrib["value"]
     if a.tag == "Device":
       for b in a:
         # - disk arrays
@@ -187,23 +217,39 @@ if __name__ == "__main__":
 #		print output[i]
 #		break
 
-  [ report1, chassisserialnumbers1 ] = return_disks_bus_faults_dict(root)
-  [ report2, chassisserialnumbers2 ] = return_disks_bus_faults_dict(root2)
+  [ report1, report1_short, chassisserialnumbers1, timegenerated1 ] = return_disks_bus_faults_dict(root)
+  [ report2, report2_short, chassisserialnumbers2, timegenerated2 ] = return_disks_bus_faults_dict(root2)
   if chassisserialnumbers1 != chassisserialnumbers2:
-    print "comparing differente chassis"
+    print "WARNING: we are comparing different chassis/servers"
 
-  print "disk, value2, value1, diff"
+  if verbosely: print "disk, value2, value1, diff"
   no_diff_cnt = 0
   diff_cnt = 0
+  bad_disks = []
   for disk in report2:
   	value2 = int(report2[disk], 16)
   	value1 = int(report1[disk], 16)
 	diff = value2 - value1
   	if value2 != value1:
 		diff_cnt = diff_cnt + 1
-  		print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+		if verbosely: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+		#bad_disks.append(disk.split(":")[2])
+		bad_disks.append(disk)
 	else:
 		no_diff_cnt = no_diff_cnt + 1
 		if debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+
+  # turn list [ '1I:1:1' ,'1I:1:2' ] into string 1I:1:[1-2]
+  # turn list [ 'Physical Drive (4 TB SAS HDD) 1I:1:32' ,'Physical Drive (4 TB SAS HDD) 1I:1:33', ... ]
+  #  into string Physical Drive (4 TB SAS HDD) 1I:1:[32-64]
+  collected_bad_disks = hostlist.collect_hostlist(bad_disks)
   if no_diff_cnt > 0 and diff_cnt < 1:
-    print "no differences in the counters between any disks in the reports"
+    if verbosely: print "no differences in the counters between any disks in the reports"
+    else: print "OK: No increases of %s on any disks" % track_this_error_counter
+    sys.exit(OK)
+  elif no_diff_cnt == 0 and diff_cnt == 0:
+    print "UNKNOWN: Found nothing, does '%s' exist?" % track_this_error_counter
+    sys.exit(UNKNOWN)
+  else:
+    print "CRITICAL: %s increased on these disks: %s (%s vs %s)" % (track_this_error_counter,collected_bad_disks,timegenerated1,timegenerated2) 
+    sys.exit(CRITICAL)
