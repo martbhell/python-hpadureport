@@ -245,7 +245,7 @@ if __name__ == "__main__":
   collected_bad_disks = hostlist.collect_hostlist(bad_disks)
   if no_diff_cnt > 0 and diff_cnt < 1:
     if verbosely: print "no differences in the counters between any disks in the reports"
-    else: print "OK: No increases of %s on any disks" % track_this_error_counter
+    else: print "OK: No increases of %s on any disks. (%s vs %s)" % (track_this_error_counter,timegenerated1,timegenerated2)
     sys.exit(OK)
   elif no_diff_cnt == 0 and diff_cnt == 0:
     print "UNKNOWN: Found nothing, does '%s' exist?" % track_this_error_counter
