@@ -24,6 +24,10 @@ import sys # for sys.exit
 import xml.etree.ElementTree as ET
 import argparse
 import hostlist # used to turn list [ '1I:1:1' ,'1I:1:2'] into string 1I:1:[1-2] 
+import json # for dumping output to JSON
+import socket # for finding hostname
+hostiname = socket.gethostname()
+import os.path # for checking if a file exists
 
 ######### Arguments
 parser = argparse.ArgumentParser(description='Process HP ADU reports')
@@ -39,6 +43,10 @@ parser.add_argument('-v', dest='verbosely', action='store_true',
                     help='output verbosely')
 parser.add_argument('-e', dest='track_this_error_counter', action='store', required=True,
                     help='counter to track - like "Bus Faults"')
+parser.add_argument('-json-file', dest='json_file', action='store',
+                    help='write json to this here file')
+parser.add_argument('-json-stdout', dest='json_stdout', action='store_true',
+                    help='write json to stdout')
 
 args = parser.parse_args()
 file1 = args.file1
@@ -46,27 +54,29 @@ file2 = args.file2
 debug = args.debug
 verbosely = args.verbosely
 track_this_error_counter = args.track_this_error_counter
+track_this_error_counter_diff = args.track_this_error_counter + "_diff"
+json_file = args.json_file
+json_stdout = args.json_stdout
 
+#########  Nagios return codes
 OK = 0
 WARNING = 1
 CRITICAL = 2
 UNKNOWN = 3
 
-######### Configuration
+######### Read the XML fiels
 tree = ET.parse(file1)
 tree2 = ET.parse(file2)
 root = tree.getroot()
 root2 = tree2.getroot()
 
+######### Default "area"
 if args.area:
   stats_area = "Monitor and Performance Statistics (Since Factory)"
 else:
   stats_area = "Monitor and Performance Statistics (Since Reset)"
 
-######### End configuration
-
 ### Schema "documentation"
-
 #<ADUReport>
 #<MetaProperty id="ADU Version" value="2.40.13.0"/>
 #<MetaProperty id="Diagnostic Module Version" value="8.4.13.0"/>
@@ -226,19 +236,33 @@ if __name__ == "__main__":
   no_diff_cnt = 0
   diff_cnt = 0
   bad_disks = []
+  bad_disks_dict = {}
   for disk in report2:
   	value2 = int(report2[disk], 16)
   	value1 = int(report1[disk], 16)
 	diff = value2 - value1
+	# write the pertinent data into a dictionary so we can later present it as JSON
+	bad_disks_dict[disk] = { "tracking": track_this_error_counter, "time1": timegenerated1, "time2": timegenerated2, "value1": value1, "value2": value2, "diff": diff, "hostname": hostiname }
   	if value2 != value1:
 		diff_cnt = diff_cnt + 1
 		if verbosely: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
-		#bad_disks.append(disk.split(":")[2])
 		bad_disks.append(disk)
 	else:
 		no_diff_cnt = no_diff_cnt + 1
 		if debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
 
+  ## JSON
+  if json_stdout: print json.dumps(bad_disks_dict)
+  if json_file: 
+    if os.path.isfile(json_file): 
+      with open(json_file, 'a') as outfile:
+        json.dump(bad_disks_dict, outfile)
+	outfile.write("\n")
+    else:
+      with open(json_file, 'w') as outfile:
+        json.dump(bad_disks_dict, outfile)
+	outfile.write("\n")
+  ## No more JSON
   # turn list [ '1I:1:1' ,'1I:1:2' ] into string 1I:1:[1-2]
   # turn list [ 'Physical Drive (4 TB SAS HDD) 1I:1:32' ,'Physical Drive (4 TB SAS HDD) 1I:1:33', ... ]
   #  into string Physical Drive (4 TB SAS HDD) 1I:1:[32-64]
