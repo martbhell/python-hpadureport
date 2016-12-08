@@ -236,13 +236,14 @@ if __name__ == "__main__":
   no_diff_cnt = 0
   diff_cnt = 0
   bad_disks = []
-  bad_disks_dict = {}
+  bad_disks_dict = { }
+  bad_disks_dict['meta'] = { "tracking": track_this_error_counter, "time1": timegenerated1, "time2": timegenerated2, "hostname": hostiname }
   for disk in report2:
   	value2 = int(report2[disk], 16)
   	value1 = int(report1[disk], 16)
 	diff = value2 - value1
 	# write the pertinent data into a dictionary so we can later present it as JSON
-	bad_disks_dict[disk] = { "tracking": track_this_error_counter, "time1": timegenerated1, "time2": timegenerated2, "value1": value1, "value2": value2, "diff": diff, "hostname": hostiname }
+	bad_disks_dict[disk] = { "value1": value1, "value2": value2, "diff": diff }
   	if value2 != value1:
 		diff_cnt = diff_cnt + 1
 		if verbosely: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
