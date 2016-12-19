@@ -47,6 +47,8 @@ parser.add_argument('-json-file', dest='json_file', action='store',
                     help='write json to this here file')
 parser.add_argument('-json-stdout', dest='json_stdout', action='store_true',
                     help='write json to stdout')
+parser.add_argument('-n', dest='negative_is_bad', action='store_true',
+                    help='count negative difference (usually a counter reset) as bad')
 
 args = parser.parse_args()
 file1 = args.file1
@@ -57,6 +59,7 @@ track_this_error_counter = args.track_this_error_counter
 track_this_error_counter_diff = args.track_this_error_counter + "_diff"
 json_file = args.json_file
 json_stdout = args.json_stdout
+negative_is_bad = args.negative_is_bad
 
 #########  Nagios return codes
 OK = 0
@@ -232,8 +235,9 @@ if __name__ == "__main__":
   if chassisserialnumbers1 != chassisserialnumbers2:
     print "WARNING: we are comparing different chassis/servers"
 
-  if verbosely: print "disk, value2, value1, diff"
+  if verbosely or debug: print "disk, value2, value1, diff"
   no_diff_cnt = 0
+  neg_cnt = 0
   diff_cnt = 0
   bad_disks = []
   bad_disks_dict = { }
@@ -245,9 +249,19 @@ if __name__ == "__main__":
 	# write the pertinent data into a dictionary so we can later present it as JSON
 	bad_disks_dict[disk] = { "value1": value1, "value2": value2, "diff": diff }
   	if value2 != value1:
-		diff_cnt = diff_cnt + 1
-		if verbosely: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
-		bad_disks.append(disk)
+		if verbosely or debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+		# If the value in the lower in the newer report
+                # Use "-n" if you want this to count as a bad_disk
+		if value2 < value1:
+		  neg_cnt = neg_cnt + 1
+		  if negative_is_bad:
+		    diff_cnt = diff_cnt + 1
+		    bad_disks.append(disk)
+		# If the value is larger in the newer report
+		else:
+		  diff_cnt = diff_cnt + 1
+		  bad_disks.append(disk)
+	# If the values are the same
 	else:
 		no_diff_cnt = no_diff_cnt + 1
 		if debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
@@ -269,7 +283,7 @@ if __name__ == "__main__":
   #  into string Physical Drive (4 TB SAS HDD) 1I:1:[32-64]
   collected_bad_disks = hostlist.collect_hostlist(bad_disks)
   if no_diff_cnt > 0 and diff_cnt < 1:
-    if verbosely: print "no differences in the counters between any disks in the reports"
+    if verbosely or debug: print "no differences in the counters between any disks in the reports"
     else: print "OK: No increases of %s on any disks. (%s vs %s)" % (track_this_error_counter,timegenerated1,timegenerated2)
     sys.exit(OK)
   elif no_diff_cnt == 0 and diff_cnt == 0:
