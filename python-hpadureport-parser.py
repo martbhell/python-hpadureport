@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Script to parse HP SSA diagnostic reports
-# Written by Johan Guldmyr 2016
+# Written by Johan Guldmyr 2016-2017
 #
 # Currently it:
 # - makes python dictionaries of the XML data..
@@ -49,6 +49,8 @@ parser.add_argument('-json-stdout', dest='json_stdout', action='store_true',
                     help='write json to stdout')
 parser.add_argument('-n', dest='negative_is_bad', action='store_true',
                     help='count negative difference (usually a counter reset) as bad')
+parser.add_argument('-6', dest='six_is_bad', action='store_true',
+                    help='count a positive difference of 6 (usually a reboot) as bad')
 
 args = parser.parse_args()
 file1 = args.file1
@@ -60,6 +62,7 @@ track_this_error_counter_diff = args.track_this_error_counter + "_diff"
 json_file = args.json_file
 json_stdout = args.json_stdout
 negative_is_bad = args.negative_is_bad
+six_is_bad = args.six_is_bad
 
 #########  Nagios return codes
 OK = 0
@@ -259,8 +262,16 @@ if __name__ == "__main__":
 		    bad_disks.append(disk)
 		# If the value is larger in the newer report
 		else:
-		  diff_cnt = diff_cnt + 1
-		  bad_disks.append(disk)
+		  if diff == 6: 
+		    if verbosely: 
+	              print "difference for %s is 6, rebooted server recently?" % disk
+		    # use "-6" if you want a positive value of 6 to not be bad
+                    if six_is_bad == True:
+		      diff_cnt = diff_cnt + 1
+		      bad_disks.append(disk)
+	          else:
+		    diff_cnt = diff_cnt + 1
+		    bad_disks.append(disk)
 	# If the values are the same
 	else:
 		no_diff_cnt = no_diff_cnt + 1
