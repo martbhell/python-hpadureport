@@ -6,8 +6,8 @@ python:
   - "2.7"
   - "3.6"
 install:
-  - travis_retry pip install --user pylint
-  - travis_retry pip install --user -r requirements.txt
+  - travis_retry pip install pylint
+  - travis_retry pip install -r requirements.txt
 before_script:
   - pylint --version
 script:
