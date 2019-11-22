@@ -140,7 +140,7 @@ def return_disks_bus_faults_dict(root):
    	      if subsysparam.attrib['id'] == "Chassis Serial Number":
                 chassisserialnumbers.append(subsysparam.attrib['value'])
         if b.tag == "Device":
-          if debug: print "b: %s" % b.tag
+          if debug: print("b: %s" % b.tag)
           for c in b:
     	  # logical drives under arrays
     	  # disk drives under storage enclosures
@@ -149,7 +149,7 @@ def return_disks_bus_faults_dict(root):
       	      try: 
                     devicetype = c.attrib['deviceType']
     	      except KeyError:
-    	        if debug: print "no deviceType for: %s" % c.attrib
+    	        if debug: print("no deviceType for: %s" % c.attrib)
     	        continue
               marketingName = c.attrib['marketingName']
               if devicetype == "PhysicalDrive":
@@ -160,12 +160,12 @@ def return_disks_bus_faults_dict(root):
     	        # physical drive status
     	          if d.attrib != {}:
                     if d.attrib['id'] == stats_area:
-    	              if debug: print d.attrib
+    	              if debug: print(d.attrib)
     	              for e in d:
     	                id = e.attrib['id']
     	                if id == track_this_error_counter:
                           bus_faults = e.attrib['value']
-    	                  if debug: print "%s : %s" % (marketingName,bus_faults)
+    	                  if debug: print("%s : %s" % (marketingName,bus_faults))
                           disk_dict[marketingName] = bus_faults
                           disk_dict_short[disk_short_name] = bus_faults
   return(disk_dict, disk_dict_short, chassisserialnumbers, time_generated)
@@ -192,12 +192,12 @@ def return_disks_all_dict(root):
 	# - storage enclosure
         if b.tag == "MetaStructure":
           if b.attrib['id'] == 'SubSystem Parameters':
-            if debug: print b.attrib['id']
+            if debug: print(b.attrib['id'])
             for subsysparam in b:
               if subsysparam.attrib['id'] == "Chassis Serial Number":
                 chassisserialnumbers.append(subsysparam.attrib['value'])
         if b.tag == "Device":
-          if debug: print "b: %s" % b.tag
+          if debug: print("b: %s" % b.tag)
           for c in b:
     	  # - logical drives under arrays
     	  # - disk drives under storage enclosures
@@ -206,7 +206,7 @@ def return_disks_all_dict(root):
       	      try: 
                     devicetype = c.attrib['deviceType']
     	      except KeyError:
-    	        if debug: print "no deviceType for: %s" % c.attrib
+    	        if debug: print("no deviceType for: %s" % c.attrib)
     	        continue
               marketingName = c.attrib['marketingName']
               if devicetype == "PhysicalDrive":
@@ -214,7 +214,7 @@ def return_disks_all_dict(root):
     	        for d in c:
     	        # physical drive status
     	          if d.attrib != {}:
-    	            if debug: print d.attrib
+    	            if debug: print(d.attrib)
                     if d.attrib['id'] == stats_area:
     	              for e in d:
     	                theid = e.attrib['id']
@@ -236,9 +236,9 @@ if __name__ == "__main__":
   [ report1, report1_short, chassisserialnumbers1, timegenerated1 ] = return_disks_bus_faults_dict(root)
   [ report2, report2_short, chassisserialnumbers2, timegenerated2 ] = return_disks_bus_faults_dict(root2)
   if chassisserialnumbers1 != chassisserialnumbers2:
-    print "WARNING: we are comparing different chassis/servers"
+    print("WARNING: we are comparing different chassis/servers")
 
-  if verbosely or debug: print "disk, value2, value1, diff"
+  if verbosely or debug: print("disk, value2, value1, diff")
   no_diff_cnt = 0
   neg_cnt = 0
   diff_cnt = 0
@@ -252,7 +252,7 @@ if __name__ == "__main__":
 	# write the pertinent data into a dictionary so we can later present it as JSON
 	bad_disks_dict[disk] = { "value1": value1, "value2": value2, "diff": diff }
   	if value2 != value1:
-		if verbosely or debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+		if verbosely or debug: print("%s, %s, %s, %s" % (disk, value2,value1, diff))
 		# If the value in the lower in the newer report
                 # Use "-n" if you want this to count as a bad_disk
 		if value2 < value1:
@@ -264,7 +264,7 @@ if __name__ == "__main__":
 		else:
 		  if diff == 6: 
 		    if verbosely: 
-	              print "difference for %s is 6, rebooted server recently?" % disk
+	              print("difference for %s is 6, rebooted server recently?" % disk)
 		    # use "-6" if you want a positive value of 6 to not be bad
                     if six_is_bad == True:
 		      diff_cnt = diff_cnt + 1
@@ -275,10 +275,10 @@ if __name__ == "__main__":
 	# If the values are the same
 	else:
 		no_diff_cnt = no_diff_cnt + 1
-		if debug: print "%s, %s, %s, %s" % (disk, value2,value1, diff)
+		if debug: print("%s, %s, %s, %s" % (disk, value2,value1, diff))
 
   ## JSON
-  if json_stdout: print json.dumps(bad_disks_dict)
+  if json_stdout: print(json.dumps(bad_disks_dict))
   if json_file: 
     if os.path.isfile(json_file): 
       with open(json_file, 'a') as outfile:
@@ -294,12 +294,12 @@ if __name__ == "__main__":
   #  into string Physical Drive (4 TB SAS HDD) 1I:1:[32-64]
   collected_bad_disks = hostlist.collect_hostlist(bad_disks)
   if no_diff_cnt > 0 and diff_cnt < 1:
-    if verbosely or debug: print "no differences in the counters between any disks in the reports"
-    else: print "OK: No increases of %s on any disks. (%s vs %s)" % (track_this_error_counter,timegenerated1,timegenerated2)
+    if verbosely or debug: print("no differences in the counters between any disks in the reports")
+    else: print("OK: No increases of %s on any disks. (%s vs %s)" % (track_this_error_counter,timegenerated1,timegenerated2))
     sys.exit(OK)
   elif no_diff_cnt == 0 and diff_cnt == 0:
-    print "UNKNOWN: Found nothing, does '%s' exist?" % track_this_error_counter
+    print("UNKNOWN: Found nothing, does '%s' exist?" % track_this_error_counter)
     sys.exit(UNKNOWN)
   else:
-    print "CRITICAL: %s increased on these disks: %s (%s vs %s)" % (track_this_error_counter,collected_bad_disks,timegenerated1,timegenerated2) 
+    print("CRITICAL: %s increased on these disks: %s (%s vs %s)" % (track_this_error_counter,collected_bad_disks,timegenerated1,timegenerated2))
     sys.exit(CRITICAL)
