@@ -134,38 +134,38 @@ def return_disks_bus_faults_dict(root):
       for b in a:
         # array or storage enclosure
 	# TODO: this can be shortened I think..
-	if b.tag == "MetaStructure":
-	  if b.attrib['id'] == 'SubSystem Parameters':
-	    for subsysparam in b:
-   	      if subsysparam.attrib['id'] == "Chassis Serial Number":
+        if b.tag == "MetaStructure":
+          if b.attrib['id'] == 'SubSystem Parameters':
+            for subsysparam in b:
+              if subsysparam.attrib['id'] == "Chassis Serial Number":
                 chassisserialnumbers.append(subsysparam.attrib['value'])
         if b.tag == "Device":
           if debug: print("b: %s" % b.tag)
           for c in b:
-    	  # logical drives under arrays
-    	  # disk drives under storage enclosures
-    	  # {'deviceType': 'PhysicalDrive', 'marketingName': 'Physical Drive (4 
-    	    if c.attrib != {}:
-      	      try: 
-                    devicetype = c.attrib['deviceType']
-    	      except KeyError:
-    	        if debug: print("no deviceType for: %s" % c.attrib)
-    	        continue
+          # logical drives under arrays
+          # disk drives under storage enclosures
+          # {'deviceType': 'PhysicalDrive', 'marketingName': 'Physical Drive (4 
+            if c.attrib != {}:
+              try: 
+                devicetype = c.attrib['deviceType']
+              except KeyError:
+                if debug: print("no deviceType for: %s" % c.attrib)
+                continue
               marketingName = c.attrib['marketingName']
               if devicetype == "PhysicalDrive":
 		# turns Physical Drive (4 TB SAS HDD) 1I:1:5
 		# into 1I:1:5
                 disk_short_name = c.attrib['marketingName'].split(' ')[6]
-    	        for d in c:
-    	        # physical drive status
-    	          if d.attrib != {}:
+                for d in c:
+                  # physical drive status
+                  if d.attrib != {}:
                     if d.attrib['id'] == stats_area:
-    	              if debug: print(d.attrib)
-    	              for e in d:
-    	                id = e.attrib['id']
-    	                if id == track_this_error_counter:
+                      if debug: print(d.attrib)
+                      for e in d:
+                        id = e.attrib['id']
+                        if id == track_this_error_counter:
                           bus_faults = e.attrib['value']
-    	                  if debug: print("%s : %s" % (marketingName,bus_faults))
+                          if debug: print("%s : %s" % (marketingName,bus_faults))
                           disk_dict[marketingName] = bus_faults
                           disk_dict_short[disk_short_name] = bus_faults
   return(disk_dict, disk_dict_short, chassisserialnumbers, time_generated)
@@ -199,31 +199,31 @@ def return_disks_all_dict(root):
         if b.tag == "Device":
           if debug: print("b: %s" % b.tag)
           for c in b:
-    	  # - logical drives under arrays
-    	  # - disk drives under storage enclosures
-    	  # {'deviceType': 'PhysicalDrive', 'marketingName': 'Physical Drive (4 
-    	    if c.attrib != {}:
-      	      try: 
+          # - logical drives under arrays
+          # - disk drives under storage enclosures
+          # {'deviceType': 'PhysicalDrive', 'marketingName': 'Physical Drive (4
+            if c.attrib != {}:
+              try:
                     devicetype = c.attrib['deviceType']
-    	      except KeyError:
-    	        if debug: print("no deviceType for: %s" % c.attrib)
-    	        continue
+              except KeyError:
+                if debug: print("no deviceType for: %s" % c.attrib)
+                continue
               marketingName = c.attrib['marketingName']
               if devicetype == "PhysicalDrive":
-	        disk_dict[marketingName] = { }
-    	        for d in c:
-    	        # physical drive status
-    	          if d.attrib != {}:
-    	            if debug: print(d.attrib)
+                disk_dict[marketingName] = { }
+                for d in c:
+                  # physical drive status
+                  if d.attrib != {}:
+                    if debug: print(d.attrib)
                     if d.attrib['id'] == stats_area:
-    	              for e in d:
-    	                theid = e.attrib['id']
-		        try:
-		          value = e.attrib['value']
-		        except KeyError:
-		          #print "no value for id %s" % theid
-		          continue
-		        disk_dict[marketingName][theid] = value
+                      for e in d:
+                        theid = e.attrib['id']
+                        try:
+                          value = e.attrib['value']
+                        except KeyError:
+                          #print "no value for id %s" % theid
+                          continue
+                        disk_dict[marketingName][theid] = value
   return(disk_dict)
 
 if __name__ == "__main__":
@@ -246,36 +246,36 @@ if __name__ == "__main__":
   bad_disks_dict = { }
   bad_disks_dict['meta'] = { "tracking": track_this_error_counter, "time1": timegenerated1, "time2": timegenerated2, "hostname": hostiname }
   for disk in report2:
-  	value2 = int(report2[disk], 16)
-  	value1 = int(report1[disk], 16)
-	diff = value2 - value1
-	# write the pertinent data into a dictionary so we can later present it as JSON
-	bad_disks_dict[disk] = { "value1": value1, "value2": value2, "diff": diff }
-  	if value2 != value1:
-		if verbosely or debug: print("%s, %s, %s, %s" % (disk, value2,value1, diff))
-		# If the value in the lower in the newer report
-                # Use "-n" if you want this to count as a bad_disk
-		if value2 < value1:
-		  neg_cnt = neg_cnt + 1
-		  if negative_is_bad:
-		    diff_cnt = diff_cnt + 1
-		    bad_disks.append(disk)
-		# If the value is larger in the newer report
-		else:
-		  if diff == 6: 
-		    if verbosely: 
-	              print("difference for %s is 6, rebooted server recently?" % disk)
-		    # use "-6" if you want a positive value of 6 to not be bad
-                    if six_is_bad == True:
-		      diff_cnt = diff_cnt + 1
-		      bad_disks.append(disk)
-	          else:
-		    diff_cnt = diff_cnt + 1
-		    bad_disks.append(disk)
-	# If the values are the same
-	else:
-		no_diff_cnt = no_diff_cnt + 1
-		if debug: print("%s, %s, %s, %s" % (disk, value2,value1, diff))
+    value2 = int(report2[disk], 16)
+    value1 = int(report1[disk], 16)
+    diff = value2 - value1
+    # write the pertinent data into a dictionary so we can later present it as JSON
+    bad_disks_dict[disk] = { "value1": value1, "value2": value2, "diff": diff }
+    if value2 != value1:
+      if verbosely or debug: print("%s, %s, %s, %s" % (disk, value2,value1, diff))
+      # If the value in the lower in the newer report
+      # Use "-n" if you want this to count as a bad_disk
+    if value2 < value1:
+      neg_cnt = neg_cnt + 1
+    if negative_is_bad:
+      diff_cnt = diff_cnt + 1
+      bad_disks.append(disk)
+    # If the value is larger in the newer report
+    else:
+      if diff == 6:
+        if verbosely:
+          print("difference for %s is 6, rebooted server recently?" % disk)
+          # use "-6" if you want a positive value of 6 to not be bad
+        if six_is_bad == True:
+          diff_cnt = diff_cnt + 1
+          bad_disks.append(disk)
+        else:
+          diff_cnt = diff_cnt + 1
+          bad_disks.append(disk)
+      # If the values are the same
+      else:
+        no_diff_cnt = no_diff_cnt + 1
+        if debug: print("%s, %s, %s, %s" % (disk, value2,value1, diff))
 
   ## JSON
   if json_stdout: print(json.dumps(bad_disks_dict))
@@ -283,11 +283,11 @@ if __name__ == "__main__":
     if os.path.isfile(json_file): 
       with open(json_file, 'a') as outfile:
         json.dump(bad_disks_dict, outfile)
-	outfile.write("\n")
+        outfile.write("\n")
     else:
       with open(json_file, 'w') as outfile:
         json.dump(bad_disks_dict, outfile)
-	outfile.write("\n")
+        outfile.write("\n")
   ## No more JSON
   # turn list [ '1I:1:1' ,'1I:1:2' ] into string 1I:1:[1-2]
   # turn list [ 'Physical Drive (4 TB SAS HDD) 1I:1:32' ,'Physical Drive (4 TB SAS HDD) 1I:1:33', ... ]

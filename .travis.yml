@@ -1,0 +1,11 @@
+sudo: false
+services:
+  - docker
+language: python - "2.7"
+install:
+  - travis_retry pip install --user pylint
+  - travis_retry pip install --user -r requirements.txt
+before_script:
+  - pylint --version
+script:
+  - pylint *.py -r y

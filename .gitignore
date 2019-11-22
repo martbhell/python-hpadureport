@@ -1,4 +1,6 @@
 *
 !*.py
+!*.txt
 !*.gitignore
 !*.md
+!.travis.yml

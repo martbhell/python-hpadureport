@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/martbhell/python-hpadureport.svg?branch=master)](https://travis-ci.org/martbhell/python-hpadureport)
+
 python-hpadureport-parser
 =========================
 
