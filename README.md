@@ -1,3 +1,5 @@
+![Python application](https://github.com/martbhell/python-hpadureport/workflows/Python%20application/badge.svg)
+
 python-hpadureport-parser
 =========================
 
